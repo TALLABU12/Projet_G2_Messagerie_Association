@@ -1,4 +1,4 @@
-package controllers;
+package org.example.ui.controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.Node;

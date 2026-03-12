@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" prefHeight="359.0" prefWidth="540.0" spacing="10" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="app.MainController">
+<VBox alignment="CENTER" prefHeight="359.0" prefWidth="540.0" spacing="10" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.ui.controllers.SignupController">
 
     <Label fx:id="outputLabel" text="Nom Utilisateur:">
       <font>

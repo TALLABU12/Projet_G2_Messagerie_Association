@@ -9,7 +9,7 @@
 <BorderPane prefHeight="600" prefWidth="1000"
             xmlns="http://javafx.com/javafx/17"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="app.ChatController">
+            fx:controller="org.example.ui.controllers.HomeViewController">
 
     <center>
 

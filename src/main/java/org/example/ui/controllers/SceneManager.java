@@ -1,4 +1,4 @@
-package controllers;
+package org.example.ui.controllers;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -11,7 +11,7 @@ public class SceneManager {
         try {
 
             Parent root = FXMLLoader.load(
-                SceneManager.class.getResource("/fxml/" + fxml)
+                SceneManager.class.getResource("/app/" + fxml)
             );
 
             Scene scene = new Scene(root);
