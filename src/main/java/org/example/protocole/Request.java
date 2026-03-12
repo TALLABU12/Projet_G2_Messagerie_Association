@@ -1,4 +1,4 @@
-package org.example.protocol;
+package org.example.protocole;
 
 import org.example.protocole.RequestType;
 

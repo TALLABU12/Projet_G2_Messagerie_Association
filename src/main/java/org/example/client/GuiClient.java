@@ -1,7 +1,7 @@
 package org.example.client;
 
 import javafx.application.Platform;
-import org.example.protocol.Request;
+import org.example.protocole.Request;
 import org.example.protocole.RequestType;
 import org.example.protocole.Response;
 import org.example.protocole.ResponseStatus;
@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 /**
  * Minimal UI-friendly wrapper for the socket protocol.
  * - connectAndLogin(...) performs LOGIN handshake and returns a Response (or throws).
- * - starts a background listener and forwards server Responses via onResponse callback on the FX thread.
+ * - Starts a background listener and forwards server Responses via onResponse callback on the FX thread.
  */
 public class GuiClient {
     private final String host;
@@ -44,7 +44,7 @@ public class GuiClient {
         this.socket = new Socket(host, port);
         // Important: ObjectOutputStream before ObjectInputStream
         this.out = new ObjectOutputStream(socket.getOutputStream());
-        this.in = new ObjectInputStream(socket.getInputStream());
+        this.in  = new ObjectInputStream(socket.getInputStream());
 
         Request loginReq = new Request(RequestType.LOGIN, username, password);
         out.writeObject(loginReq);
@@ -52,13 +52,13 @@ public class GuiClient {
 
         Object obj = in.readObject();
         if (!(obj instanceof Response)) {
-            throw new IllegalStateException("Bad response from server");
+            throw new IllegalStateException("Réponse inattendue du serveur");
         }
         Response resp = (Response) obj;
 
         if (resp.getStatus() == ResponseStatus.SUCCESS) {
             this.username = username;
-            // start listener thread to receive pushes
+            // Start listener thread to receive server pushes
             Thread t = new Thread(this::incomingLoop, "GuiClient-Incoming");
             t.setDaemon(true);
             t.start();
@@ -72,16 +72,17 @@ public class GuiClient {
                 Object obj = in.readObject();
                 if (obj instanceof Response && onResponse != null) {
                     Response r = (Response) obj;
-                    // forward to UI on FX thread
                     Platform.runLater(() -> onResponse.accept(r));
                 }
             }
         } catch (Exception e) {
             if (onResponse != null) {
-                Response r = new Response();
-                r.setStatus(ResponseStatus.FAILURE);
-                r.setMessage("Connection lost: " + e.getMessage());
-                Platform.runLater(() -> onResponse.accept(r));
+                // Use the two-arg constructor — no setters needed, no unknown enum values
+                Response disconnected = new Response(
+                        ResponseStatus.ERROR,
+                        "❌ Déconnecté du serveur : " + e.getMessage()
+                );
+                Platform.runLater(() -> onResponse.accept(disconnected));
             }
             try { close(); } catch (Exception ignored) {}
         }
@@ -118,7 +119,7 @@ public class GuiClient {
     }
 
     public void close() throws Exception {
-        if (in != null) in.close();
+        if (in  != null) in.close();
         if (out != null) out.close();
         if (socket != null) socket.close();
     }

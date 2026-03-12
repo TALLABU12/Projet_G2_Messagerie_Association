@@ -1,31 +1,28 @@
 package org.example.ui.controllers;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import org.example.client.GuiClient;
-import org.example.protocole.Response; // ensure this import matches your class package
-
-import java.io.IOException;
-import org.example.protocol.Request;
-import org.example.protocole.RequestType;
+import org.example.protocole.Response;
+import org.example.protocole.ResponseStatus;
 
 public class LoginController {
 
-    @FXML private TextField nameField;      // give fx:id="nameField" in loginView.fxml
-    @FXML private PasswordField passwordField; // fx:id="passwordField"
-    @FXML private Button submitButton;      // fx:id="submitButton" and onAction="#handleLoginButton"
+    @FXML private TextField     nameField;
+    @FXML private PasswordField passwordField;
+    @FXML private Button        loginButton;   // optional: disable during request
 
-    // change if server is remote
-    private final String SERVER_HOST = "127.0.0.1";
-    private final int SERVER_PORT = 5000;
-
-    //private GuiClient guiClient;
+    private static final String HOST = "127.0.0.1";
+    private static final int    PORT = 5000;
 
     @FXML
     private void handleLoginButton() {
@@ -33,57 +30,72 @@ public class LoginController {
         String password = passwordField.getText().trim();
 
         if (username.isEmpty() || password.isEmpty()) {
-            showMessage("Veuillez remplir tous les champs.");
+            showAlert(Alert.AlertType.WARNING, "Champs manquants",
+                    "Veuillez renseigner votre nom d'utilisateur et votre mot de passe.");
             return;
         }
 
-        submitButton.setDisable(true);
+        // Disable button to prevent double-clicks while connecting
+        if (loginButton != null) loginButton.setDisable(true);
 
-        // Do network work off the UI thread
-        new Thread(() -> {
+        GuiClient client = new GuiClient(HOST, PORT);
+
+        // Network call must happen off the FX thread
+        Thread loginThread = new Thread(() -> {
             try {
-                Request loginRequest = new Request(RequestType.LOGIN, username, password);
-                Response loginResponse = (Response) in.readObject();
+                Response response = client.connectAndLogin(username, password);
 
-                if (resp.getStatus() != null && resp.getStatus().name().equals("SUCCESS")) {
-                    // success -> switch to HomeView.fxml on FX thread
-                    javafx.application.Platform.runLater(() -> {
-                        try {
-                            Stage stage = (Stage) submitButton.getScene().getWindow();
-                            Parent home = FXMLLoader.load(getClass().getResource("/app/homeView.fxml"));
-                            stage.getScene().setRoot(home);
-                            // store guiClient in stage userdata so HomeViewController can retrieve it
-                            stage.setUserData(guiClient);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            showMessage("Erreur lors du chargement de l'interface.");
-                        }
-                    });
-                } else {
-                    // login failed -> show message
-                    String msg = (resp != null && resp.getMessage() != null) ? resp.getMessage() : "Authentification échouée.";
-                    javafx.application.Platform.runLater(() -> {
-                        showMessage(msg);
-                        submitButton.setDisable(false);
-                    });
-                    try { guiClient.close(); } catch (Exception ignored) {}
-                }
+                Platform.runLater(() -> {
+                    if (response.getStatus() == ResponseStatus.SUCCESS) {
+                        openHomeView(client);
+                    } else {
+                        if (loginButton != null) loginButton.setDisable(false);
+                        showAlert(Alert.AlertType.ERROR, "Accès refusé", response.getMessage());
+                    }
+                });
 
             } catch (Exception e) {
-                String m = e.getMessage() == null ? e.toString() : e.getMessage();
-                javafx.application.Platform.runLater(() -> {
-                    showMessage("Impossible de se connecter au serveur:\n" + m);
-                    submitButton.setDisable(false);
+                Platform.runLater(() -> {
+                    if (loginButton != null) loginButton.setDisable(false);
+                    showAlert(Alert.AlertType.ERROR, "Erreur de connexion",
+                            "Impossible de joindre le serveur : " + e.getMessage());
                 });
             }
-        }, "Login-Worker").start();
+        }, "Login-Thread");
+
+        loginThread.setDaemon(true);
+        loginThread.start();
     }
 
-    // shows a tiny modal dialog with OK button
-    private void showMessage(String text) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    private void openHomeView(GuiClient client) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/app/homeView.fxml"));
+            Parent root = loader.load();
+
+            // TODO: uncomment once HomeController exists
+            // HomeController homeCtrl = loader.getController();
+            // homeCtrl.init(client);
+
+            Stage stage = (Stage) nameField.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.setTitle("Messagerie – " + client.getUsername());
+            stage.show();
+
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Erreur",
+                    "Impossible d'ouvrir la vue principale : " + e.getMessage());
+        }
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type, message, ButtonType.OK);
+        alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(text);
         alert.showAndWait();
     }
 }
