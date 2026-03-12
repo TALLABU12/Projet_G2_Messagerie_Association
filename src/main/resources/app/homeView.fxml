@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane prefHeight="600" prefWidth="1000"
+            xmlns="http://javafx.com/javafx/17"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="app.ChatController">
+
+    <center>
+
+        <HBox>
+
+            <!-- SIDEBAR -->
+            <VBox prefWidth="120" spacing="20"
+                  alignment="TOP_CENTER"
+                  style="-fx-background-color:#2c3e50;">
+
+                <padding>
+                    <Insets top="20"/>
+                </padding>
+
+                <!-- Profile placeholder -->
+                <Circle radius="30" fill="#bdc3c7"/>
+
+                <Label text="User"
+                       style="-fx-text-fill:white;"/>
+
+                <Separator/>
+
+                <Button text="Profile" prefWidth="90"/>
+                <Button text="Settings" prefWidth="90"/>
+
+                <Pane VBox.vgrow="ALWAYS"/>
+
+                <Button text="Logout" prefWidth="90"/>
+
+            </VBox>
+
+
+            <!-- CONVERSATION LIST -->
+            <VBox prefWidth="260"
+                  style="-fx-background-color:#ecf0f1;">
+
+                <Label text="Conversations">
+                    <font>
+                        <Font size="16"/>
+                    </font>
+                    <padding>
+                        <Insets left="10" top="10"/>
+                    </padding>
+                </Label>
+
+                <TableView fx:id="conversationTable"
+                           VBox.vgrow="ALWAYS">
+
+                    <columns>
+
+                        <TableColumn text="User"
+                                     prefWidth="200"
+                                     fx:id="userColumn"/>
+
+                        <TableColumn text="Last Message"
+                                     prefWidth="200"
+                                     fx:id="lastMessageColumn"/>
+
+                    </columns>
+
+                </TableView>
+
+            </VBox>
+
+
+            <!-- CHAT AREA -->
+            <VBox spacing="10" HBox.hgrow="ALWAYS">
+
+                <!-- messages -->
+                <ListView fx:id="messageList"
+                          VBox.vgrow="ALWAYS"/>
+
+                <!-- message input -->
+                <HBox spacing="10">
+                    <padding>
+                        <Insets bottom="10" left="10" right="10"/>
+                    </padding>
+
+                    <TextField fx:id="messageField"
+                               promptText="Type message..."
+                               HBox.hgrow="ALWAYS"/>
+
+                    <Button text="Send"
+                            onAction="#sendMessage"/>
+
+                </HBox>
+
+            </VBox>
+
+        </HBox>
+
+    </center>
+
+</BorderPane>
