@@ -2,7 +2,7 @@ package org.example.client;
 
 import org.example.entity.Message;
 import org.example.entity.User;
-import org.example.protocole.Request;
+import org.example.protocol.Request;
 import org.example.protocole.RequestType;
 import org.example.protocole.Response;
 import org.example.protocole.ResponseStatus;
