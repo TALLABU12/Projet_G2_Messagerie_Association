@@ -6,18 +6,12 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextArea?>
-<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<!--
-    HomeController: org.example.ui.controllers.HomeController
-    Layout: [Sidebar] | [Conversation List Panel] | [Chat Panel]
--->
 <HBox
     fx:id="rootHBox"
     xmlns="http://javafx.com/javafx/21"
@@ -28,7 +22,7 @@
     style="-fx-background-color: #1e1e2e;">
 
     <!-- ═══════════════════════════════════════════════════
-         LEFT SIDEBAR  – navigation buttons
+         LEFT SIDEBAR
          ═══════════════════════════════════════════════════ -->
     <VBox
         fx:id="sidebarVBox"
@@ -36,10 +30,8 @@
         prefWidth="130.0"
         minWidth="110.0"
         style="-fx-background-color: #181825; -fx-border-color: #313244; -fx-border-width: 0 1 0 0;">
-
         <padding><Insets top="20.0" bottom="20.0" left="10.0" right="10.0"/></padding>
 
-        <!-- App / user name label -->
         <Label
             fx:id="currentUserLabel"
             text="Messagerie"
@@ -54,7 +46,7 @@
             <VBox.margin><Insets bottom="15.0"/></VBox.margin>
         </Separator>
 
-        <!-- Utilisateurs button -->
+        <!-- Always visible — shows all users or ORGANISATEUR panel depending on role -->
         <Button
             fx:id="usersBtn"
             text="Utilisateurs"
@@ -64,10 +56,8 @@
             <VBox.margin><Insets bottom="8.0"/></VBox.margin>
         </Button>
 
-        <!-- Spacer -->
         <Region VBox.vgrow="ALWAYS"/>
 
-        <!-- Quit button pinned to bottom -->
         <Button
             fx:id="quitBtn"
             text="Quitter"
@@ -84,18 +74,16 @@
         prefWidth="220.0"
         minWidth="180.0"
         style="-fx-background-color: #1e1e2e; -fx-border-color: #313244; -fx-border-width: 0 1 0 0;">
-
         <padding><Insets top="12.0" bottom="12.0" left="8.0" right="8.0"/></padding>
 
         <Label
             text="Conversations"
             maxWidth="Infinity"
             alignment="CENTER_LEFT"
-            style="-fx-text-fill: #a6adc8; -fx-font-size: 11; -fx-font-weight: bold; letter-spacing: 1;">
+            style="-fx-text-fill: #a6adc8; -fx-font-size: 11; -fx-font-weight: bold;">
             <VBox.margin><Insets bottom="8.0"/></VBox.margin>
         </Label>
 
-        <!-- "Ajouter Conversation" button -->
         <Button
             fx:id="addConversationBtn"
             text="+ Ajouter Conversation"
@@ -105,7 +93,6 @@
             <VBox.margin><Insets bottom="10.0"/></VBox.margin>
         </Button>
 
-        <!-- Conversation list – each cell shows the recipient name -->
         <ListView
             fx:id="conversationListView"
             VBox.vgrow="ALWAYS"
@@ -113,7 +100,7 @@
     </VBox>
 
     <!-- ═══════════════════════════════════════════════════
-         CHAT PANEL  (disabled until a conversation is selected)
+         CHAT PANEL
          ═══════════════════════════════════════════════════ -->
     <BorderPane
         fx:id="chatPanel"
@@ -121,10 +108,11 @@
         disable="true"
         style="-fx-background-color: #1e1e2e; -fx-opacity: 0.45;">
 
-        <!-- TOP: recipient name header -->
+        <!-- TOP: recipient name + role badge -->
         <top>
             <HBox
                 alignment="CENTER_LEFT"
+                spacing="10.0"
                 prefHeight="52.0"
                 style="-fx-background-color: #181825; -fx-border-color: #313244; -fx-border-width: 0 0 1 0;">
                 <padding><Insets left="18.0" right="18.0"/></padding>
@@ -135,22 +123,27 @@
                     style="-fx-text-fill: #cdd6f4; -fx-font-size: 15; -fx-font-weight: bold;">
                     <font><Font name="System Bold" size="15.0"/></font>
                 </Label>
+
+                <!-- Role badge — text set by controller, hidden until a convo is selected -->
+                <Label
+                    fx:id="destinataireRoleLabel"
+                    text=""
+                    style="-fx-text-fill: #cba6f7; -fx-font-size: 11; -fx-font-weight: bold;
+                           -fx-background-color: #313244; -fx-background-radius: 5;
+                           -fx-padding: 2 8 2 8;">
+                </Label>
             </HBox>
         </top>
 
-        <!-- CENTER: message bubble list -->
+        <!-- CENTER: chat bubbles -->
         <center>
-            <!--
-                chatListView items are HBox nodes built in the controller
-                (sent = right-aligned green bubble, received = left-aligned white bubble)
-            -->
             <ListView
                 fx:id="chatListView"
                 style="-fx-background-color: #1e1e2e; -fx-border-color: transparent;"
                 BorderPane.alignment="CENTER"/>
         </center>
 
-        <!-- BOTTOM: text input + send button -->
+        <!-- BOTTOM: input bar -->
         <bottom>
             <HBox
                 alignment="CENTER_LEFT"
@@ -159,6 +152,11 @@
                 style="-fx-background-color: #181825; -fx-border-color: #313244; -fx-border-width: 1 0 0 0;">
                 <padding><Insets top="8.0" bottom="8.0" left="12.0" right="12.0"/></padding>
 
+                <!--
+                    -fx-text-fill: #cdd6f4  → typed text bright white
+                    -fx-control-inner-background drives the actual glyph color in most FX skins;
+                    setting it here + text-fill covers both the Modena and Caspian skins.
+                -->
                 <TextArea
                     fx:id="messageTextArea"
                     promptText="Écrire un message…"
@@ -166,13 +164,24 @@
                     maxHeight="38.0"
                     wrapText="true"
                     HBox.hgrow="ALWAYS"
-                    style="-fx-background-color: #313244; -fx-text-fill: #cdd6f4; -fx-prompt-text-fill: #585b70; -fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: transparent; -fx-font-size: 13;"/>
+                    style="-fx-control-inner-background: #313244;
+                           -fx-background-color: #313244;
+                           -fx-text-fill: #cdd6f4;
+                           -fx-prompt-text-fill: #585b70;
+                           -fx-highlight-fill: #89b4fa;
+                           -fx-highlight-text-fill: #1e1e2e;
+                           -fx-background-radius: 8;
+                           -fx-border-radius: 8;
+                           -fx-border-color: transparent;
+                           -fx-font-size: 13;"/>
 
                 <Button
                     fx:id="sendBtn"
                     text="Envoyer"
                     onAction="#handleSend"
-                    style="-fx-background-color: #89b4fa; -fx-text-fill: #1e1e2e; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand; -fx-pref-height: 38; -fx-pref-width: 85;"/>
+                    style="-fx-background-color: #89b4fa; -fx-text-fill: #1e1e2e;
+                           -fx-font-weight: bold; -fx-background-radius: 8;
+                           -fx-cursor: hand; -fx-pref-height: 38; -fx-pref-width: 85;"/>
             </HBox>
         </bottom>
     </BorderPane>
