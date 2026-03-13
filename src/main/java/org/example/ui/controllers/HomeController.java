@@ -371,6 +371,12 @@ public class HomeController implements Initializable {
     // ── "Nouvelle conversation" dialog ────────────────────────────────────────
 
     private void showNewConversationDialog() {
+        // Pre-fetch user list in the background if we don't have it yet,
+        // so the "user not found" check works by the time the user hits Ajouter.
+        if (knownUsers.isEmpty() && client != null) {
+            try { client.requestAllUsers(); } catch (Exception ignored) {}
+        }
+
         Stage dialog = new Stage();
         dialog.initModality(Modality.APPLICATION_MODAL);
         dialog.initStyle(StageStyle.UNDECORATED);
@@ -395,7 +401,7 @@ public class HomeController implements Initializable {
         fieldLbl.setStyle("-fx-text-fill: " + FG_SUBTEXT + "; -fx-font-size: 11; -fx-font-weight: bold;");
 
         TextField input = new TextField();
-        input.setPromptText("ex: nafi");
+        input.setPromptText("ex: alice");
         input.setPrefWidth(300);
         input.setStyle(
                 "-fx-control-inner-background: " + BG_SURFACE + ";" +
@@ -420,9 +426,30 @@ public class HomeController implements Initializable {
 
         confirmBtn.setOnAction(e -> {
             String name = input.getText().trim();
-            if (name.isEmpty()) { errorLbl.setText("Le nom ne peut pas être vide."); return; }
-            if (name.equals(myUsername)) { errorLbl.setText("Vous ne pouvez pas vous écrire à vous-même."); return; }
-            if (conversationListView.getItems().contains(name)) { errorLbl.setText("Cette conversation existe déjà."); return; }
+            if (name.isEmpty()) {
+                errorLbl.setText("Le nom ne peut pas être vide.");
+                return;
+            }
+            if (name.equals(myUsername)) {
+                errorLbl.setText("Vous ne pouvez pas vous écrire à vous-même.");
+                return;
+            }
+            if (conversationListView.getItems().contains(name)) {
+                errorLbl.setText("Cette conversation existe déjà.");
+                return;
+            }
+            // If knownUsers is empty we haven't fetched the list yet — warn but allow.
+            // If it is populated and the name is not in it, the user does not exist.
+            if (!knownUsers.isEmpty() && !knownUsers.containsKey(name)) {
+                errorLbl.setText("Utilisateur introuvable.");
+                errorLbl.setStyle("-fx-text-fill: " + RED + "; -fx-font-size: 11;");
+                return;
+            }
+            if (knownUsers.isEmpty()) {
+                // List not loaded yet — show a soft warning but still allow creation
+                errorLbl.setStyle("-fx-text-fill: " + YELLOW + "; -fx-font-size: 11;");
+                errorLbl.setText("Liste non chargée — vérification impossible.");
+            }
             conversationListView.getItems().add(name);
             messageCache.putIfAbsent(name, new ArrayList<>());
             dialog.close();
