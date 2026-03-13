@@ -28,59 +28,75 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 /**
- * Controller for homeView.fxml.
+ * Controller linked to homeView.fxml
  *
- * Responsibilities:
- *  - Maintain a list of known conversation recipients (left ListView).
- *  - When a conversation is selected, enable the chat panel, update the
- *    recipient label, and load the message history via GuiClient.
- *  - Render history as chat bubbles (sent = right, received = left).
- *  - "Envoyer" calls GuiClient.sendMessage() and appends the bubble locally.
- *  - Incoming server-push messages (from the GuiClient listener) are handled
- *    in onServerResponse() and appended to the correct conversation.
+ * Main role:
+ * - Manage the list of known users / conversations shown in the left ListView.
+ * - When a conversation is selected:
+ *      enable the chat area,
+ *      update the recipient label,
+ *      load message history using GuiClient.
+ * - Display messages as chat bubbles:
+ *      sent messages on the right,
+ *      received messages on the left.
+ * - The "Send" button calls GuiClient.sendMessage()
+ *      then directly adds the message to the UI.
+ * - Incoming messages from the server (through GuiClient listener)
+ *      go through onServerResponse() and are added
+ *      to the correct conversation.
  *
- * HOW TO WIRE THIS CONTROLLER:
- *   In your application startup (e.g. GuiClient after a successful login),
- *   obtain the HomeController via FXMLLoader.getController() and call
- *   controller.init(guiClient, loggedInUsername).
+ * Controller setup:
+ * - After a successful login (for example inside GuiClient),
+ *   get the controller using FXMLLoader.getController()
+ *   then call:
+ *      controller.init(guiClient, loggedInUsername);
  */
 public class HomeController implements Initializable {
 
-    // ── FXML fields ───────────────────────────────────────────────────────────
+    // Fxml fields injected from HomeView
+    @FXML
+    private Label currentUserLabel;
+    @FXML
+    private Button usersBtn;
+    @FXML
+    private Button quitBtn;
 
-    @FXML private Label         currentUserLabel;
-    @FXML private Button        usersBtn;
-    @FXML private Button        quitBtn;
+    @FXML
+    private Button addConversationBtn;
+    @FXML
+    private ListView<String> conversationListView;   // items = recipient usernames
 
-    @FXML private Button        addConversationBtn;
-    @FXML private ListView<String> conversationListView;   // items = recipient usernames
+    @FXML
+    private BorderPane chatPanel;
+    @FXML
+    private Label destinataireNameLabel;
+    @FXML
+    private ListView<HBox> chatListView;             // items = rendered bubble rows
+    @FXML
+    private TextArea messageTextArea;
+    @FXML
+    private Button sendBtn;
 
-    @FXML private BorderPane    chatPanel;
-    @FXML private Label         destinataireNameLabel;
-    @FXML private ListView<HBox> chatListView;             // items = rendered bubble rows
-    @FXML private TextArea      messageTextArea;
-    @FXML private Button        sendBtn;
-
-    // ── Internal state ────────────────────────────────────────────────────────
-
-    private GuiClient   client;
-    private String      myUsername;
-
-    /** Currently selected conversation recipient. Null = none selected. */
-    private String      selectedRecipient = null;
+    // Internal state
+    private GuiClient client;
+    private String myUsername;
 
     /**
-     * In-memory message cache, keyed by recipient username.
-     * Filled on first load from history; new messages appended live.
+     * Currently selected conversation recipient. Null = none selected.
      */
-    private final java.util.Map<String, List<Message>> messageCache =
-            new java.util.HashMap<>();
+    private String selectedRecipient = null;
 
-    private static final DateTimeFormatter TIME_FMT =
-            DateTimeFormatter.ofPattern("HH:mm");
+    /**
+     * In-memory message cache, keyed by recipient username. Filled on first
+     * load from history; new messages appended live.
+     */
+    private final java.util.Map<String, List<Message>> messageCache
+            = new java.util.HashMap<>();
+
+    private static final DateTimeFormatter TIME_FMT
+            = DateTimeFormatter.ofPattern("HH:mm");
 
     // ── Initializable ─────────────────────────────────────────────────────────
-
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Chat panel starts visually disabled (no conversation selected)
@@ -88,12 +104,12 @@ public class HomeController implements Initializable {
 
         // Conversation list click → select conversation
         conversationListView.getSelectionModel()
-                            .selectedItemProperty()
-                            .addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                onConversationSelected(newVal);
-            }
-        });
+                .selectedItemProperty()
+                .addListener((obs, oldVal, newVal) -> {
+                    if (newVal != null) {
+                        onConversationSelected(newVal);
+                    }
+                });
 
         // Send on Enter (no Shift)
         messageTextArea.addEventFilter(KeyEvent.KEY_PRESSED, ke -> {
@@ -104,16 +120,14 @@ public class HomeController implements Initializable {
         });
     }
 
-    // ── Public API – call this after login ───────────────────────────────────
-
     /**
      * Must be called once after the FXML is loaded and login succeeded.
      *
-     * @param guiClient  connected, authenticated GuiClient
-     * @param username   the logged-in user's username
+     * @param guiClient connected, authenticated GuiClient
+     * @param username the logged-in user's username
      */
     public void init(GuiClient guiClient, String username) {
-        this.client     = guiClient;
+        this.client = guiClient;
         this.myUsername = username;
 
         currentUserLabel.setText(username);
@@ -122,8 +136,7 @@ public class HomeController implements Initializable {
         client.setOnResponse(this::onServerResponse);
     }
 
-    // ── Conversation selection ────────────────────────────────────────────────
-
+    // Conversation Selection
     private void onConversationSelected(String recipient) {
         selectedRecipient = recipient;
         destinataireNameLabel.setText(recipient);
@@ -134,7 +147,9 @@ public class HomeController implements Initializable {
         requestHistory(recipient);
     }
 
-    /** Enable/disable + fade the entire right-hand chat panel. */
+    /**
+     * Enable/disable + fade the entire right-hand chat panel.
+     */
     private void setChatPanelEnabled(boolean enabled) {
         chatPanel.setDisable(!enabled);
         chatPanel.setStyle(enabled
@@ -142,8 +157,7 @@ public class HomeController implements Initializable {
                 : "-fx-background-color: #1e1e2e; -fx-opacity: 0.45;");
     }
 
-    // ── FXML action handlers ──────────────────────────────────────────────────
-
+    // FXML adding a new conversation
     @FXML
     private void handleAddConversation() {
         // Ask the user to type the recipient's username
@@ -164,10 +178,14 @@ public class HomeController implements Initializable {
 
     @FXML
     private void handleSend() {
-        if (client == null || selectedRecipient == null) return;
+        if (client == null || selectedRecipient == null) {
+            return;
+        }
 
         String content = messageTextArea.getText().trim();
-        if (content.isEmpty()) return;
+        if (content.isEmpty()) {
+            return;
+        }
 
         try {
             client.sendMessage(selectedRecipient, content);
@@ -184,7 +202,9 @@ public class HomeController implements Initializable {
 
     @FXML
     private void handleUsersBtn() {
-        if (client == null) return;
+        if (client == null) {
+            return;
+        }
         try {
             client.requestAllUsers();
         } catch (Exception e) {
@@ -194,13 +214,14 @@ public class HomeController implements Initializable {
 
     @FXML
     private void handleQuit() {
-        if (client != null) client.logout();
+        if (client != null) {
+            client.logout();
+        }
         Platform.exit();
         System.exit(0);
     }
 
-    // ── Server response handling ──────────────────────────────────────────────
-
+    // Server response handling
     /**
      * Called on the JavaFX thread for every Response pushed by the server.
      */
@@ -215,14 +236,14 @@ public class HomeController implements Initializable {
         if (data instanceof List) {
             List<?> list = (List<?>) data;
             if (!list.isEmpty() && list.get(0) instanceof Message) {
-                // ── History response ──────────────────────────────────────
+                // History
                 handleHistoryResponse(list);
             } else if (!list.isEmpty() && list.get(0) instanceof User) {
-                // ── All-users response ────────────────────────────────────
+                // All-users
                 handleAllUsersResponse(list);
             }
         } else if (data instanceof Message) {
-            // ── Incoming real-time message ────────────────────────────────
+            // New message
             handleIncomingMessage((Message) data);
         }
     }
@@ -230,7 +251,9 @@ public class HomeController implements Initializable {
     @SuppressWarnings("unchecked")
     private void handleHistoryResponse(List<?> rawList) {
         List<Message> messages = (List<Message>) rawList;
-        if (messages.isEmpty()) return;
+        if (messages.isEmpty()) {
+            return;
+        }
 
         // Determine the conversation partner from the first message
         Message first = messages.get(0);
@@ -261,7 +284,7 @@ public class HomeController implements Initializable {
     }
 
     private void handleIncomingMessage(Message msg) {
-        String sender   = msg.getSender().getUsername();
+        String sender = msg.getSender().getUsername();
         String receiver = msg.getReceiver().getUsername();
 
         // The partner is the "other" person in the exchange
@@ -283,10 +306,11 @@ public class HomeController implements Initializable {
         }
     }
 
-    // ── History / rendering helpers ───────────────────────────────────────────
-
+    // History rendering
     private void requestHistory(String recipient) {
-        if (client == null) return;
+        if (client == null) {
+            return;
+        }
         try {
             client.requestHistory(recipient);
         } catch (Exception e) {
@@ -294,40 +318,44 @@ public class HomeController implements Initializable {
         }
     }
 
-    /** Clear the chat list and re-render from the in-memory cache. */
+    /**
+     * Clear the chat list and re-render from the in-memory cache.
+     */
     private void renderCache(String recipient) {
         chatListView.getItems().clear();
         List<Message> msgs = messageCache.getOrDefault(recipient, List.of());
         for (Message m : msgs) {
             boolean isMine = m.getSender().getUsername().equals(myUsername);
             appendBubble(recipient,
-                         m.getSender().getUsername(),
-                         m.getContenu(),
-                         m.getDateEnvoi(),
-                         isMine);
+                    m.getSender().getUsername(),
+                    m.getContenu(),
+                    m.getDateEnvoi(),
+                    isMine);
         }
     }
 
     /**
      * Build one bubble row and add it to the chatListView.
      *
-     * Sent messages  → right-aligned, blue bubble (#89b4fa).
-     * Received msgs  → left-aligned,  white bubble (#cdd6f4).
+     * Sent messages → right-aligned, blue bubble (#89b4fa). Received msgs →
+     * left-aligned, white bubble (#cdd6f4).
      */
     private void appendBubble(String conversation,
-                               String senderUsername,
-                               String content,
-                               java.time.LocalDateTime time,
-                               boolean isMine) {
+            String senderUsername,
+            String content,
+            java.time.LocalDateTime time,
+            boolean isMine) {
 
         // Only add to the view if this conversation is currently shown
-        if (!conversation.equals(selectedRecipient)) return;
+        if (!conversation.equals(selectedRecipient)) {
+            return;
+        }
 
         HBox row = new HBox();
         row.setPadding(new Insets(4, 10, 4, 10));
         row.setMaxWidth(Double.MAX_VALUE);
 
-        // ── Bubble label ──────────────────────────────────────────────────────
+        // Bubble label
         Label bubble = new Label(content);
         bubble.setWrapText(true);
         bubble.setMaxWidth(420);
@@ -338,10 +366,10 @@ public class HomeController implements Initializable {
         if (isMine) {
             // Sent: right side, blue
             bubble.setStyle(
-                    "-fx-background-color: #89b4fa;" +
-                    "-fx-text-fill: #1e1e2e;" +
-                    "-fx-background-radius: 14 14 2 14;" +
-                    "-fx-font-size: 13;");
+                    "-fx-background-color: #89b4fa;"
+                    + "-fx-text-fill: #1e1e2e;"
+                    + "-fx-background-radius: 14 14 2 14;"
+                    + "-fx-font-size: 13;");
             row.setAlignment(Pos.CENTER_RIGHT);
 
             // Timestamp label
@@ -356,10 +384,10 @@ public class HomeController implements Initializable {
         } else {
             // Received: left side, light
             bubble.setStyle(
-                    "-fx-background-color: #313244;" +
-                    "-fx-text-fill: #cdd6f4;" +
-                    "-fx-background-radius: 14 14 14 2;" +
-                    "-fx-font-size: 13;");
+                    "-fx-background-color: #313244;"
+                    + "-fx-text-fill: #cdd6f4;"
+                    + "-fx-background-radius: 14 14 14 2;"
+                    + "-fx-font-size: 13;");
             row.setAlignment(Pos.CENTER_LEFT);
 
             // Sender name (shown for received only)
@@ -380,8 +408,7 @@ public class HomeController implements Initializable {
         chatListView.scrollTo(chatListView.getItems().size() - 1);
     }
 
-    // ── Utilities ─────────────────────────────────────────────────────────────
-
+    // Helpers
     private void showAlert(String title, String msg) {
         Platform.runLater(() -> {
             Alert alert = new Alert(Alert.AlertType.ERROR, msg, ButtonType.OK);
